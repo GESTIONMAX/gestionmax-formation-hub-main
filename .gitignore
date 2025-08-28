@@ -18,10 +18,6 @@ dist-ssr
 .next/cache/
 .next/cache/webpack/
 
-# Fichiers volumineux identifiés
-lucide-react
-react
-
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
