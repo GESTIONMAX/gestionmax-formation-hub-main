@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useToast } from ".//use-toast";
 import api from "@/services/api";
@@ -12,11 +11,16 @@ export interface Reclamation {
   message: string;
   statut: 'nouvelle' | 'en_cours' | 'resolue' | 'fermee';
   priorite: 'basse' | 'normale' | 'haute' | 'urgente';
-  assignee_id?: string;
-  notes_internes?: string;
-  date_resolution?: Date;
-  created_at: Date;
-  updated_at: Date;
+  assigneeId?: string;
+  assignee?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  notesInternes?: string;
+  dateResolution?: string | Date;
+  createdAt: string | Date;
+  updatedAt: string | Date;
 }
 
 export interface CreateReclamationData {
@@ -36,14 +40,18 @@ export const useReclamations = () => {
   const fetchReclamations = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/reclamations');
+      const response = await api.get('/api/reclamations');
+      
+      if (!Array.isArray(response.data)) {
+        throw new Error('Format de réponse inattendu de l\'API');
+      }
       
       setReclamations(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erreur lors du chargement des réclamations:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de charger les réclamations",
+        description: `Impossible de charger les réclamations: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -53,54 +61,65 @@ export const useReclamations = () => {
 
   const createReclamation = async (data: CreateReclamationData) => {
     try {
-      await api.post('/reclamations', {
-        nom: data.nom,
-        email: data.email,
-        telephone: data.telephone,
-        sujet: data.sujet,
-        message: data.message,
-        priorite: data.priorite || 'normale',
-        statut: 'nouvelle' // Valeur par défaut
-      });
-
+      const response = await api.post('/api/reclamations', data);
+      await fetchReclamations(); // Recharger la liste des réclamations
+      
       toast({
-        title: "Réclamation envoyée",
-        description: "Votre réclamation a été enregistrée avec succès. Nous vous contacterons rapidement.",
+        title: "Réclamation créée",
+        description: "Votre réclamation a été enregistrée avec succès.",
       });
-
-      await fetchReclamations();
-      return true;
-    } catch (error) {
+      
+      return response.data;
+    } catch (error: any) {
       console.error('Erreur lors de la création de la réclamation:', error);
       toast({
         title: "Erreur",
-        description: "Impossible d'envoyer la réclamation",
+        description: `Impossible de créer la réclamation: ${error.message}`,
         variant: "destructive",
       });
-      return false;
+      throw error;
     }
   };
 
   const updateReclamation = async (id: string, updates: Partial<Reclamation>) => {
     try {
-      // Utiliser directement l'API pour mettre à jour
-      await api.put(`/reclamations/${id}`, updates);
-
+      const response = await api.put(`/api/reclamations/${id}`, updates);
+      await fetchReclamations(); // Recharger la liste des réclamations
+      
       toast({
         title: "Réclamation mise à jour",
-        description: "Les modifications ont été sauvegardées",
+        description: "La réclamation a été mise à jour avec succès.",
       });
-
-      await fetchReclamations();
-      return true;
-    } catch (error) {
-      console.error('Erreur lors de la mise à jour:', error);
+      
+      return response.data;
+    } catch (error: any) {
+      console.error('Erreur lors de la mise à jour de la réclamation:', error);
       toast({
         title: "Erreur",
-        description: "Impossible de mettre à jour la réclamation",
+        description: `Impossible de mettre à jour la réclamation: ${error.message}`,
         variant: "destructive",
       });
-      return false;
+      throw error;
+    }
+  };
+
+  const deleteReclamation = async (id: string) => {
+    try {
+      await api.delete(`/api/reclamations/${id}`);
+      await fetchReclamations(); // Recharger la liste des réclamations
+      
+      toast({
+        title: "Réclamation supprimée",
+        description: "La réclamation a été supprimée avec succès.",
+      });
+    } catch (error: any) {
+      console.error('Erreur lors de la suppression de la réclamation:', error);
+      toast({
+        title: "Erreur",
+        description: `Impossible de supprimer la réclamation: ${error.message}`,
+        variant: "destructive",
+      });
+      throw error;
     }
   };
 
@@ -111,8 +130,9 @@ export const useReclamations = () => {
   return {
     reclamations,
     loading,
+    refresh: fetchReclamations,
     createReclamation,
     updateReclamation,
-    fetchReclamations,
+    deleteReclamation,
   };
 };

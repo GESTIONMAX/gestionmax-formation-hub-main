@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const statut = searchParams.get('statut');
     const priorite = searchParams.get('priorite');
-    const assigneeId = searchParams.get('assignee');
+    const assigneeId = searchParams.get('assigneeId');
     
     // Construction du filtre dynamique
     const where: any = {};
@@ -61,13 +61,22 @@ export async function GET(request: NextRequest) {
     // Récupérer toutes les réclamations avec Prisma et filtrage
     const reclamations = await prisma.reclamation.findMany({
       where,
+      include: {
+        assignee: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
       orderBy: {
         createdAt: 'desc'
       }
     });
     
     // Renvoyer les données au format attendu (avec enveloppe data)
-    return NextResponse.json({ data: reclamations });
+    return NextResponse.json(reclamations);
   } catch (error: any) {
     console.error('Erreur lors de la récupération des réclamations:', error);
     return NextResponse.json(
